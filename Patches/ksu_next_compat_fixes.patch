@@ -1,0 +1,785 @@
+diff --git a/kernel/msm-5.4/drivers/kernelsu/util.h b/kernel/msm-5.4/drivers/kernelsu/util.h
+--- a/kernel/msm-5.4/drivers/kernelsu/util.h
++++ b/kernel/msm-5.4/drivers/kernelsu/util.h
+@@
+-#include <linux/types.h>
++#include <linux/types.h>
++#include <linux/uaccess.h>
++#include <linux/version.h>
++
++#ifndef TWA_RESUME
++#define TWA_RESUME true
++#endif
+@@
+ #ifndef preempt_disable_notrace
+ #define preempt_disable_notrace()                                              \
+     do {                                                                       \
+         __preempt_count_inc();                                                 \
+         barrier();                                                             \
+     } while (0)
+ #endif
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
++static inline long strncpy_from_user_nofault(char *dst,
++                                             const char __user *src,
++                                             long count)
++{
++    return strncpy_from_user(dst, src, count);
++}
++
++static inline size_t copy_from_user_nofault(void *dst,
++                                            const void __user *src,
++                                            size_t size)
++{
++    return copy_from_user(dst, src, size);
++}
++
++static inline size_t copy_to_user_nofault(void __user *dst,
++                                          const void *src,
++                                          size_t size)
++{
++    return copy_to_user(dst, src, size);
++}
++#endif
+ 
+ bool try_set_access_flag(unsigned long addr);
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/ksu.h b/kernel/msm-5.4/drivers/kernelsu/ksu.h
+--- a/kernel/msm-5.4/drivers/kernelsu/ksu.h
++++ b/kernel/msm-5.4/drivers/kernelsu/ksu.h
+@@
+ #define EVENT_POST_FS_DATA 1
+ #define EVENT_BOOT_COMPLETED 2
+ #define EVENT_MODULE_MOUNTED 3
++
++#ifndef TWA_RESUME
++#define TWA_RESUME true
++#endif
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/allowlist.c b/kernel/msm-5.4/drivers/kernelsu/allowlist.c
+--- a/kernel/msm-5.4/drivers/kernelsu/allowlist.c
++++ b/kernel/msm-5.4/drivers/kernelsu/allowlist.c
+@@
+ #include <linux/types.h>
+ #include <linux/version.h>
+ #include <linux/compiler_types.h>
++#include <linux/sched/task.h>
++
++#ifndef TWA_RESUME
++#define TWA_RESUME true
++#endif
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/setuid_hook.c b/kernel/msm-5.4/drivers/kernelsu/setuid_hook.c
+--- a/kernel/msm-5.4/drivers/kernelsu/setuid_hook.c
++++ b/kernel/msm-5.4/drivers/kernelsu/setuid_hook.c
+@@
+ #include "supercalls.h"
+ #include "syscall_hook_manager.h"
+ #include "kernel_umount.h"
++
++#ifndef TWA_RESUME
++#define TWA_RESUME true
++#endif
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/sucompat.c b/kernel/msm-5.4/drivers/kernelsu/sucompat.c
+--- a/kernel/msm-5.4/drivers/kernelsu/sucompat.c
++++ b/kernel/msm-5.4/drivers/kernelsu/sucompat.c
+@@
+-#include <linux/pgtable.h>
++#include <asm/pgtable.h>
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/pkg_observer.c b/kernel/msm-5.4/drivers/kernelsu/pkg_observer.c
+--- a/kernel/msm-5.4/drivers/kernelsu/pkg_observer.c
++++ b/kernel/msm-5.4/drivers/kernelsu/pkg_observer.c
+@@
+-static int ksu_handle_inode_event(struct fsnotify_mark *mark, u32 mask,
+-                                  struct inode *inode, struct inode *dir,
+-                                  const struct qstr *file_name, u32 cookie)
++static int ksu_handle_event(struct fsnotify_group *group, struct inode *inode,
++                            u32 mask, const void *data, int data_is,
++                            const struct qstr *file_name, u32 cookie,
++                            struct fsnotify_iter_info *iter_info)
+ {
+     if (!file_name)
+         return 0;
+@@
+ }
+ 
+ static const struct fsnotify_ops ksu_ops = {
+-    .handle_inode_event = ksu_handle_inode_event,
++    .handle_event = ksu_handle_event,
+ };
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/app_profile.c b/kernel/msm-5.4/drivers/kernelsu/app_profile.c
+--- a/kernel/msm-5.4/drivers/kernelsu/app_profile.c
++++ b/kernel/msm-5.4/drivers/kernelsu/app_profile.c
+@@
+-void seccomp_filter_release(struct task_struct *tsk);
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++void seccomp_filter_release(struct task_struct *tsk);
++#endif
+@@
+     current->seccomp.mode = 0;
+     current->seccomp.filter = NULL;
+-    atomic_set(&current->seccomp.filter_count, 0);
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++    atomic_set(&current->seccomp.filter_count, 0);
++#endif
+     spin_unlock_irq(&current->sighand->siglock);
+@@
+-    seccomp_filter_release(fake);
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)
++    seccomp_filter_release(fake);
++#else
++    put_seccomp_filter(fake);
++#endif
+     kfree(fake);
+ }
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/seccomp_cache.c b/kernel/msm-5.4/drivers/kernelsu/seccomp_cache.c
+--- a/kernel/msm-5.4/drivers/kernelsu/seccomp_cache.c
++++ b/kernel/msm-5.4/drivers/kernelsu/seccomp_cache.c
+@@
+ #include <linux/uaccess.h>
+ #include <linux/filter.h>
+ #include <linux/seccomp.h>
++#include <asm/unistd.h>
+ #include "klog.h" // IWYU pragma: keep
+ #include "seccomp_cache.h"
++
++#ifndef SECCOMP_ARCH_NATIVE_NR
++#define SECCOMP_ARCH_NATIVE_NR NR_syscalls
++#endif
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/file_wrapper.c b/kernel/msm-5.4/drivers/kernelsu/file_wrapper.c
+--- a/kernel/msm-5.4/drivers/kernelsu/file_wrapper.c
++++ b/kernel/msm-5.4/drivers/kernelsu/file_wrapper.c
+@@
+ #include <linux/version.h>
+ #include <linux/mount.h>
+ 
+ #include "objsec.h"
++
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 10, 0)
++static inline int security_inode_init_security_anon(struct inode *inode,
++                                                    struct qstr *name,
++                                                    const struct inode *dir)
++{
++    return 0;
++}
++#endif
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/selinux/rules.c b/kernel/msm-5.4/drivers/kernelsu/selinux/rules.c
+--- a/kernel/msm-5.4/drivers/kernelsu/selinux/rules.c
++++ b/kernel/msm-5.4/drivers/kernelsu/selinux/rules.c
+@@
+ static struct policydb *get_policydb(void)
+ {
+-    struct policydb *db;
+-    struct selinux_policy *policy = selinux_state.policy;
+-    db = &policy->policydb;
+-    return db;
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 0, 0)
++    struct selinux_policy *policy = selinux_state.policy;
++    return &policy->policydb;
++#else
++    return &selinux_state.ss->policydb;
++#endif
+ }
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/selinux/sepolicy.c b/kernel/msm-5.4/drivers/kernelsu/selinux/sepolicy.c
+--- a/kernel/msm-5.4/drivers/kernelsu/selinux/sepolicy.c
++++ b/kernel/msm-5.4/drivers/kernelsu/selinux/sepolicy.c
+@@
+-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
+-#define symtab_search(s, name) hashtab_search((s)->table, name)
+-#define symtab_insert(s, name, datum) hashtab_insert((s)->table, name, datum)
+-#endif
++#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 9, 0)
++#ifndef symtab_search
++#define symtab_search(s, name) hashtab_search((s)->table, name)
++#define symtab_insert(s, name, datum) hashtab_insert((s)->table, name, datum)
++#endif
++#endif
+@@
+-// 5.9.0 : static inline int hashtab_insert(struct hashtab *h, void *key, void
+-// *datum, struct hashtab_key_params key_params) 5.8.0: int
+-// hashtab_insert(struct hashtab *h, void *k, void *d);
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
+-static u32 filenametr_hash(const void *k)
+-{
+-    const struct filename_trans_key *ft = k;
+-    unsigned long hash;
+-    unsigned int byte_num;
+-    unsigned char focus;
+-
+-    hash = ft->ttype ^ ft->tclass;
+-
+-    byte_num = 0;
+-    while ((focus = ft->name[byte_num++]))
+-        hash = partial_name_hash(focus, hash);
+-    return hash;
+-}
+-
+-static int filenametr_cmp(const void *k1, const void *k2)
+-{
+-    const struct filename_trans_key *ft1 = k1;
+-    const struct filename_trans_key *ft2 = k2;
+-    int v;
+-
+-    v = ft1->ttype - ft2->ttype;
+-    if (v)
+-        return v;
+-
+-    v = ft1->tclass - ft2->tclass;
+-    if (v)
+-        return v;
+-
+-    return strcmp(ft1->name, ft2->name);
+-}
+-
+-static const struct hashtab_key_params filenametr_key_params = {
+-    .hash = filenametr_hash,
+-    .cmp = filenametr_cmp,
+-};
+-#endif
+-
+-static bool add_filename_trans(struct policydb *db, const char *s,
+-                               const char *t, const char *c, const char *d,
+-                               const char *o)
+-{
+-    struct type_datum *src, *tgt, *def;
+-    struct class_datum *cls;
+-
+-    src = symtab_search(&db->p_types, s);
+-    if (src == NULL) {
+-        pr_warn("source type %s does not exist\n", s);
+-        return false;
+-    }
+-    tgt = symtab_search(&db->p_types, t);
+-    if (tgt == NULL) {
+-        pr_warn("target type %s does not exist\n", t);
+-        return false;
+-    }
+-    cls = symtab_search(&db->p_classes, c);
+-    if (cls == NULL) {
+-        pr_warn("class %s does not exist\n", c);
+-        return false;
+-    }
+-    def = symtab_search(&db->p_types, d);
+-    if (def == NULL) {
+-        pr_warn("default type %s does not exist\n", d);
+-        return false;
+-    }
+-
+-    struct filename_trans_key key;
+-    key.ttype = tgt->value;
+-    key.tclass = cls->value;
+-    key.name = (char *)o;
+-
+-    struct filename_trans_datum *last = NULL;
+-
+-    struct filename_trans_datum *trans = policydb_filenametr_search(db, &key);
+-    while (trans) {
+-        if (ebitmap_get_bit(&trans->stypes, src->value - 1)) {
+-            // Duplicate, overwrite existing data and return
+-            trans->otype = def->value;
+-            return true;
+-        }
+-        if (trans->otype == def->value)
+-            break;
+-        last = trans;
+-        trans = trans->next;
+-    }
+-
+-    if (trans == NULL) {
+-        trans = (struct filename_trans_datum *)kcalloc(1, sizeof(*trans),
+-                                                       GFP_ATOMIC);
+-        struct filename_trans_key *new_key =
+-            (struct filename_trans_key *)kzalloc(sizeof(*new_key), GFP_ATOMIC);
+-        *new_key = key;
+-        new_key->name = kstrdup(key.name, GFP_ATOMIC);
+-        trans->next = last;
+-        trans->otype = def->value;
+-        hashtab_insert(&db->filename_trans, new_key, trans,
+-                       filenametr_key_params);
+-    }
+-
+-    db->compat_filename_trans_count++;
+-    return ebitmap_set_bit(&trans->stypes, src->value - 1, 1) == 0;
+-}
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 10, 0)
++// 5.9.0 : static inline int hashtab_insert(struct hashtab *h, void *key, void
++// *datum, struct hashtab_key_params key_params) 5.8.0: int
++// hashtab_insert(struct hashtab *h, void *k, void *d);
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 9, 0)
++static u32 filenametr_hash(const void *k)
++{
++    const struct filename_trans_key *ft = k;
++    unsigned long hash;
++    unsigned int byte_num;
++    unsigned char focus;
++
++    hash = ft->ttype ^ ft->tclass;
++
++    byte_num = 0;
++    while ((focus = ft->name[byte_num++]))
++        hash = partial_name_hash(focus, hash);
++    return hash;
++}
++
++static int filenametr_cmp(const void *k1, const void *k2)
++{
++    const struct filename_trans_key *ft1 = k1;
++    const struct filename_trans_key *ft2 = k2;
++    int v;
++
++    v = ft1->ttype - ft2->ttype;
++    if (v)
++        return v;
++
++    v = ft1->tclass - ft2->tclass;
++    if (v)
++        return v;
++
++    return strcmp(ft1->name, ft2->name);
++}
++
++static const struct hashtab_key_params filenametr_key_params = {
++    .hash = filenametr_hash,
++    .cmp = filenametr_cmp,
++};
++#endif
++
++static bool add_filename_trans(struct policydb *db, const char *s,
++                               const char *t, const char *c, const char *d,
++                               const char *o)
++{
++    struct type_datum *src, *tgt, *def;
++    struct class_datum *cls;
++
++    src = symtab_search(&db->p_types, s);
++    if (src == NULL) {
++        pr_warn("source type %s does not exist\n", s);
++        return false;
++    }
++    tgt = symtab_search(&db->p_types, t);
++    if (tgt == NULL) {
++        pr_warn("target type %s does not exist\n", t);
++        return false;
++    }
++    cls = symtab_search(&db->p_classes, c);
++    if (cls == NULL) {
++        pr_warn("class %s does not exist\n", c);
++        return false;
++    }
++    def = symtab_search(&db->p_types, d);
++    if (def == NULL) {
++        pr_warn("default type %s does not exist\n", d);
++        return false;
++    }
++
++    struct filename_trans_key key;
++    key.ttype = tgt->value;
++    key.tclass = cls->value;
++    key.name = (char *)o;
++
++    struct filename_trans_datum *last = NULL;
++
++    struct filename_trans_datum *trans = policydb_filenametr_search(db, &key);
++    while (trans) {
++        if (ebitmap_get_bit(&trans->stypes, src->value - 1)) {
++            // Duplicate, overwrite existing data and return
++            trans->otype = def->value;
++            return true;
++        }
++        if (trans->otype == def->value)
++            break;
++        last = trans;
++        trans = trans->next;
++    }
++
++    if (trans == NULL) {
++        trans = (struct filename_trans_datum *)kcalloc(1, sizeof(*trans),
++                                                       GFP_ATOMIC);
++        struct filename_trans_key *new_key =
++            (struct filename_trans_key *)kzalloc(sizeof(*new_key), GFP_ATOMIC);
++        *new_key = key;
++        new_key->name = kstrdup(key.name, GFP_ATOMIC);
++        trans->next = last;
++        trans->otype = def->value;
++        hashtab_insert(&db->filename_trans, new_key, trans,
++                       filenametr_key_params);
++    }
++
++    db->compat_filename_trans_count++;
++    return ebitmap_set_bit(&trans->stypes, src->value - 1, 1) == 0;
++}
++#else
++static bool add_filename_trans(struct policydb *db, const char *s,
++                               const char *t, const char *c, const char *d,
++                               const char *o)
++{
++    struct type_datum *src, *tgt, *def;
++    struct class_datum *cls;
++    struct filename_trans key;
++    struct filename_trans_datum *trans;
++    struct filename_trans *new_key;
++
++    src = symtab_search(&db->p_types, s);
++    if (src == NULL) {
++        pr_warn("source type %s does not exist\n", s);
++        return false;
++    }
++    tgt = symtab_search(&db->p_types, t);
++    if (tgt == NULL) {
++        pr_warn("target type %s does not exist\n", t);
++        return false;
++    }
++    cls = symtab_search(&db->p_classes, c);
++    if (cls == NULL) {
++        pr_warn("class %s does not exist\n", c);
++        return false;
++    }
++    def = symtab_search(&db->p_types, d);
++    if (def == NULL) {
++        pr_warn("default type %s does not exist\n", d);
++        return false;
++    }
++
++    key.stype = src->value;
++    key.ttype = tgt->value;
++    key.tclass = cls->value;
++    key.name = (char *)o;
++
++    trans = hashtab_search(db->filename_trans, &key);
++    if (trans) {
++        trans->otype = def->value;
++        return true;
++    }
++
++    trans = (struct filename_trans_datum *)kzalloc(sizeof(*trans), GFP_ATOMIC);
++    if (!trans) {
++        pr_err("alloc filename_trans_datum failed.\n");
++        return false;
++    }
++    trans->otype = def->value;
++
++    new_key = (struct filename_trans *)kzalloc(sizeof(*new_key), GFP_ATOMIC);
++    if (!new_key) {
++        kfree(trans);
++        return false;
++    }
++    new_key->stype = key.stype;
++    new_key->ttype = key.ttype;
++    new_key->tclass = key.tclass;
++    new_key->name = kstrdup(key.name, GFP_ATOMIC);
++    if (!new_key->name) {
++        kfree(new_key);
++        kfree(trans);
++        return false;
++    }
++
++    if (hashtab_insert(db->filename_trans, new_key, trans)) {
++        kfree((char *)new_key->name);
++        kfree(new_key);
++        kfree(trans);
++        return false;
++    }
++
++    if (ebitmap_set_bit(&db->filename_trans_ttypes, new_key->ttype, 1))
++        return false;
++
++    return true;
++}
++#endif
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/kernel_umount.h b/kernel/msm-5.4/drivers/kernelsu/kernel_umount.h
+--- a/kernel/msm-5.4/drivers/kernelsu/kernel_umount.h
++++ b/kernel/msm-5.4/drivers/kernelsu/kernel_umount.h
+@@
+ int ksu_handle_umount(uid_t old_uid, uid_t new_uid);
++void ksu_try_umount(const char *mnt, bool check_uid, int flags, uid_t uid);
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/kernel_umount.c b/kernel/msm-5.4/drivers/kernelsu/kernel_umount.c
+--- a/kernel/msm-5.4/drivers/kernelsu/kernel_umount.c
++++ b/kernel/msm-5.4/drivers/kernelsu/kernel_umount.c
+@@
+ #include <linux/nsproxy.h>
+ #include <linux/path.h>
+ #include <linux/printk.h>
+ #include <linux/types.h>
++#include <linux/limits.h>
++#include <linux/uaccess.h>
+@@
+-extern int path_umount(struct path *path, int flags);
++extern int ksys_umount(char __user *name, int flags);
+ 
+ static void ksu_umount_mnt(struct path *path, int flags)
+ {
+-    int err = path_umount(path, flags);
++    char *buf;
++    char *p;
++    mm_segment_t old_fs;
++    int err;
++
++    buf = kmalloc(PATH_MAX, GFP_ATOMIC);
++    if (!buf)
++        return;
++
++    p = d_path(path, buf, PATH_MAX);
++    if (IS_ERR(p)) {
++        kfree(buf);
++        return;
++    }
++
++    old_fs = get_fs();
++    set_fs(KERNEL_DS);
++    err = ksys_umount((char __user *)p, flags);
++    set_fs(old_fs);
+     if (err) {
+-        pr_info("umount %s failed: %d\n", path->dentry->d_iname, err);
++        pr_info("umount %s failed: %d\n", p, err);
+     }
++    kfree(buf);
+ }
+@@
+ static void try_umount(const char *mnt, int flags)
+ {
+@@
+     ksu_umount_mnt(&path, flags);
+ }
++
++void ksu_try_umount(const char *mnt, bool check_uid, int flags, uid_t uid)
++{
++    if (check_uid && !ksu_uid_should_umount(uid))
++        return;
++    try_umount(mnt, flags);
++}
+
+diff --git a/kernel/msm-5.4/drivers/kernelsu/su_mount_ns.c b/kernel/msm-5.4/drivers/kernelsu/su_mount_ns.c
+--- a/kernel/msm-5.4/drivers/kernelsu/su_mount_ns.c
++++ b/kernel/msm-5.4/drivers/kernelsu/su_mount_ns.c
+@@
+ #include <linux/sched/task.h>
+ #include <linux/slab.h>
+ #include <linux/syscalls.h>
+ #include <linux/task_work.h>
++#include <linux/uaccess.h>
+ #include <linux/version.h>
+ #include <uapi/linux/mount.h>
+@@
+-extern int path_mount(const char *dev_name, struct path *path,
+-                      const char *type_page, unsigned long flags,
+-                      void *data_page);
++extern long ksys_mount(const char __user *dev_name,
++                       const char __user *dir_name,
++                       const char __user *type,
++                       unsigned long flags,
++                       const void __user *data);
+@@
+ static void ksu_mnt_ns_individual(void)
+ {
+     long ret = ksys_unshare(CLONE_NEWNS);
+     if (ret) {
+         pr_warn("call ksys_unshare failed: %ld\n", ret);
+         return;
+     }
+ 
+     // make root mount private
+-    struct path root_path;
+-    get_fs_root(current->fs, &root_path);
+-    int pm_ret = path_mount(NULL, &root_path, NULL, MS_PRIVATE | MS_REC, NULL);
+-    path_put(&root_path);
++    struct path root_path;
++    char *root_buf = NULL;
++    char *root = NULL;
++    mm_segment_t old_fs;
++
++    get_fs_root(current->fs, &root_path);
++    root_buf = kmalloc(PATH_MAX, GFP_KERNEL);
++    if (root_buf) {
++        root = d_path(&root_path, root_buf, PATH_MAX);
++        if (IS_ERR(root))
++            root = NULL;
++    }
++
++    old_fs = get_fs();
++    set_fs(KERNEL_DS);
++    int pm_ret = ksys_mount(NULL, root ? root : "/", NULL,
++                            MS_PRIVATE | MS_REC, NULL);
++    set_fs(old_fs);
++
++    kfree(root_buf);
++    path_put(&root_path);
+ 
+     if (pm_ret < 0) {
+         pr_err("failed to make root private, err: %d\n", pm_ret);
+     }
+ }
+
+diff --git a/kernel/msm-5.4/fs/susfs.c b/kernel/msm-5.4/fs/susfs.c
+--- a/kernel/msm-5.4/fs/susfs.c
++++ b/kernel/msm-5.4/fs/susfs.c
+@@
+ void susfs_try_umount(uid_t target_uid) {
+     struct st_susfs_try_umount_list *cursor = NULL;
+@@
+     }
+ }
++
++void susfs_try_umount_all(uid_t uid)
++{
++    susfs_try_umount(uid);
++}
+
+diff --git a/kernel/msm-5.4/drivers/media/platform/msm/cvp/hfi_response_handler.c b/kernel/msm-5.4/drivers/media/platform/msm/cvp/hfi_response_handler.c
+--- a/kernel/msm-5.4/drivers/media/platform/msm/cvp/hfi_response_handler.c
++++ b/kernel/msm-5.4/drivers/media/platform/msm/cvp/hfi_response_handler.c
+@@
+-        inst = cvp_get_inst_from_id(core, (unsigned int)session_id);
++        inst = cvp_get_inst_from_id(core, (unsigned int)(uintptr_t)session_id);
+
+diff --git a/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8152_regs.c b/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8152_regs.c
+--- a/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8152_regs.c
++++ b/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8152_regs.c
+@@
+-#include <linux/device.h>
++#include <linux/device.h>
++#include <linux/slab.h>
+@@
+ static void sia8152_check_trimming(
+ 	struct regmap *regmap)
+ {
+ 	int i = 0;
+ 	const uint32_t reg_num = ARRAY_SIZE(trimming_regs);
+-	uint8_t vals[reg_num] = {0};
++	uint8_t *vals = NULL;
+ 	uint8_t crc = 0;
++
++	vals = kcalloc(reg_num, sizeof(*vals), GFP_KERNEL);
++	if (!vals)
++		return;
+@@
+ 	for (i = 0; i < reg_num; i++) {
+ 		if (0 != sia81xx_regmap_read(regmap, 
+ 			trimming_regs[i].addr, 1, (char *)&vals[i]))
+-			return ;
++			goto out_free;
+ 	}
+@@
+ 	if (crc != crc4_itu(vals, reg_num)) {
+ 		pr_warn("[ warn][%s] %s: trimming failed !! \r\n", 
+ 			LOG_FLAG, __func__);
+ 
+ 		if (0 != sia81xx_regmap_read(regmap, SIA8152_REG_OPC_HCFG, 1, (char *)vals))
+-			return;
++			goto out_free;
+ 
+ 		*vals |= 0x02;
+ 		if (0 != sia81xx_regmap_write(regmap, SIA8152_REG_OPC_HCFG, 1, (char *)vals))
+-			return;
++			goto out_free;
+ 
+ 		for (i = 0; i < reg_num; i++)
+ 			sia81xx_regmap_write(regmap, 
+ 				trimming_regs[i].addr, 1, (char *)&(trimming_regs[i].val));
+ 	}
++
++out_free:
++	kfree(vals);
+ }
+
+diff --git a/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8152s_regs.c b/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8152s_regs.c
+--- a/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8152s_regs.c
++++ b/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8152s_regs.c
+@@
+-#include <linux/device.h>
++#include <linux/device.h>
++#include <linux/slab.h>
+@@
+ void sia8152s_check_trimming(
+ 	struct regmap *regmap)
+ {
+ 	int i = 0;
+ 	const uint32_t reg_num = ARRAY_SIZE(trimming_regs);
+-	uint8_t vals[reg_num] = {0};
++	uint8_t *vals = NULL;
+ 	uint8_t crc = 0;
++
++	vals = kcalloc(reg_num, sizeof(*vals), GFP_KERNEL);
++	if (!vals)
++		return;
+@@
+ 	for (i = 0; i < reg_num; i++) {
+ 		if (0 != sia81xx_regmap_read(regmap, 
+ 			trimming_regs[i].addr, 1, (char *)&vals[i]))
+-			return ;
++			goto out_free;
+ 	}
+@@
+ 	if (crc != crc8_maxim(vals, reg_num - 1)) {
+ 		pr_warn("[ warn][%s] %s: trimming failed !! \r\n", 
+ 			LOG_FLAG, __func__);
+ 
+ 		if (0 != sia81xx_regmap_read(regmap, SIA8152S_REG_OPC_HCFG, 1, (char *)vals))
+-			return;
++			goto out_free;
+ 
+ 		*vals |= 0x02;
+ 		if (0 != sia81xx_regmap_write(regmap, SIA8152S_REG_OPC_HCFG, 1, (char *)vals))
+-			return;
++			goto out_free;
+ 
+ 		for (i = 0; i < reg_num - 1; i++)
+ 			sia81xx_regmap_write(regmap, 
+ 				trimming_regs[i].addr, 1, (char *)&(trimming_regs[i].val));
+ 	}
++
++out_free:
++	kfree(vals);
+ }
+
+diff --git a/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8159_regs.c b/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8159_regs.c
+--- a/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8159_regs.c
++++ b/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8159_regs.c
+@@
+-#define SIA8159_WRITEABLE_REG_NUM			(10)
++#define SIA8159_WRITEABLE_REG_NUM			(10)
++#define SIA8159_TRIMMING_REG_NUM			\
++	(SIA8159_REG_TRIMMING_END - SIA8159_REG_TRIMMING_BEGIN + 1)
+@@
+ static void sia8159_check_trimming(
+ 	struct regmap *regmap)
+ {
+-	static const uint32_t reg_num = 
+-		SIA8159_REG_TRIMMING_END - SIA8159_REG_TRIMMING_BEGIN + 1;
+-	static const char defaults[reg_num] = {0x76, 0x66, 0x70};
+-	uint8_t vals[reg_num] = {0};
++	const uint32_t reg_num = SIA8159_TRIMMING_REG_NUM;
++	static const char defaults[SIA8159_TRIMMING_REG_NUM] = {0x76, 0x66, 0x70};
++	uint8_t vals[SIA8159_TRIMMING_REG_NUM] = {0};
+ 	uint8_t crc = 0;
+
+diff --git a/kernel/msm-5.4/techpack/audio/asoc/codecs/tfa98xx-v6/tfa98xx_v6.c b/kernel/msm-5.4/techpack/audio/asoc/codecs/tfa98xx-v6/tfa98xx_v6.c
+--- a/kernel/msm-5.4/techpack/audio/asoc/codecs/tfa98xx-v6/tfa98xx_v6.c
++++ b/kernel/msm-5.4/techpack/audio/asoc/codecs/tfa98xx-v6/tfa98xx_v6.c
+@@
+-	const int size = 1024;
+-	char buffer[size];
++	char buffer[1024];
++	const int size = sizeof(buffer);
+ 	int n = 0;
+
+diff --git a/vendor/oplus/kernel/system/uboot_log/uboot_log.c b/vendor/oplus/kernel/system/uboot_log/uboot_log.c
+--- a/vendor/oplus/kernel/system/uboot_log/uboot_log.c
++++ b/vendor/oplus/kernel/system/uboot_log/uboot_log.c
+@@
+-int ubootback_thread_fn()
++int ubootback_thread_fn(void *data)
+ {
+ 	size_t line_len = 0;
+ 	u32 idx =0;
+ 	u64 seq =0;
++
++	(void)data;

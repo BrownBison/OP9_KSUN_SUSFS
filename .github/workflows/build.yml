@@ -102,7 +102,7 @@ jobs:
           
           # Initialize and sync kernel source
           echo "Initializing and syncing kernel source..."
-          $REPO init -u https://github.com/fatalcoder524/OP9_KSUN_SUSFS.git -b main -m manifest.xml --repo-rev=v2.16 --depth=1 --no-clone-bundle --no-tags
+          $REPO init -u https://github.com/${GITHUB_REPOSITORY}.git -b main -m manifest.xml --repo-rev=v2.16 --depth=1 --no-clone-bundle --no-tags
           
           # Sync repo and apply patches
           $REPO --trace sync -c --no-clone-bundle --no-tags --optimized-fetch -j$(nproc --all) --fail-fast
@@ -170,6 +170,12 @@ jobs:
           echo "Changing to configuration directory: $CONFIG..."
           cd "$CONFIG/kernel/msm-5.4"
           bash $GITHUB_WORKSPACE/Patches/ksu_patch.sh
+
+      - name: Apply KernelSU/SUSFS Compatibility Fixes
+        run: |
+          echo "Changing to configuration directory: $CONFIG..."
+          cd "$CONFIG"
+          patch -p1 -F 3 < $GITHUB_WORKSPACE/Patches/ksu_next_compat_fixes.patch
 
       - name: Apply Hide Stuff Patches
         run: |
