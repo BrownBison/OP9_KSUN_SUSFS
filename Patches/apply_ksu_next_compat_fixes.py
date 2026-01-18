@@ -216,7 +216,7 @@ def edit_file_wrapper_c(text: str) -> str:
 
 
 def edit_rules_c(text: str) -> str:
-    pattern = r"static struct policydb \*get_policydb\(\)\n\{\n.*?\n\}"
+    pattern = r"static struct policydb \*get_policydb\([^)]*\)\n\{\n.*?\n\}"
     replacement = (
         "static struct policydb *get_policydb(void)\n"
         "{\n"
