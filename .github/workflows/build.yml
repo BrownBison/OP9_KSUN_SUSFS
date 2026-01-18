@@ -188,6 +188,8 @@ jobs:
           echo "Changing to configuration directory: $CONFIG..."
           cd "$CONFIG/kernel/msm-5.4"
           bash $GITHUB_WORKSPACE/Patches/ksu_patch.sh
+          # Ensure inline hooks are only built when KSU is built-in.
+          sed -i -E 's/^[[:space:]]*#ifdef[[:space:]]+CONFIG_KSU/#if defined(CONFIG_KSU) \&\& !defined(CONFIG_KSU_MODULE)/' fs/read_write.c drivers/input/input.c
 
       - name: Apply KernelSU/SUSFS Compatibility Fixes
         run: |
