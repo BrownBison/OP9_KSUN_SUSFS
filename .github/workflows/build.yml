@@ -202,34 +202,52 @@ jobs:
           echo "Changing to configuration directory: $CONFIG..."
           cd "$CONFIG/kernel/msm-5.4"
           
-          echo "Adding configuration settings to gki_defconfig..."
-          # echo "CONFIG_WERROR=n" >> ./arch/arm64/configs/gki_defconfig
+          echo "Adding configuration settings to config fragments..."
+          ensure_config() {
+            local cfg="$1"
+            local key="$2"
+            local val="$3"
+            if grep -q "^${key}=" "$cfg"; then
+              sed -i "s/^${key}=.*/${key}=${val}/" "$cfg"
+            elif grep -q "^# ${key} is not set" "$cfg"; then
+              sed -i "s/^# ${key} is not set/${key}=${val}/" "$cfg"
+            else
+              echo "${key}=${val}" >> "$cfg"
+            fi
+          }
           
-          # Add KSU configuration settings
-          echo "CONFIG_KSU=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_WITH_KPROBES=n" >> ./arch/arm64/configs/gki_defconfig
+          for cfg in ./arch/arm64/configs/gki_defconfig ./arch/arm64/configs/vendor/lahaina_NQGKI.config; do
+            if [ ! -f "$cfg" ]; then
+              echo "Skip missing config: $cfg"
+              continue
+            fi
           
-          # Add SUSFS configuration settings
-          echo "CONFIG_KSU_SUSFS=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_SUS_PATH=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_SUS_MOUNT=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_SUS_KSTAT=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_SUS_OVERLAYFS=n" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_TRY_UMOUNT=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_SPOOF_UNAME=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_ENABLE_LOG=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> ./arch/arm64/configs/gki_defconfig
+            # Add KSU configuration settings (built-in to satisfy inline hooks)
+            ensure_config "$cfg" CONFIG_KSU y
+            ensure_config "$cfg" CONFIG_KSU_WITH_KPROBES n
           
-          # Add additional tmpfs config setting
-          echo "CONFIG_TMPFS_XATTR=y" >> ./arch/arm64/configs/gki_defconfig
-          echo "CONFIG_TMPFS_POSIX_ACL=y" >> ./arch/arm64/configs/gki_defconfig
+            # Add SUSFS configuration settings
+            ensure_config "$cfg" CONFIG_KSU_SUSFS y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_SUS_PATH y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_SUS_MOUNT y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_AUTO_ADD_SUS_KSU_DEFAULT_MOUNT y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_AUTO_ADD_SUS_BIND_MOUNT y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_SUS_KSTAT y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_SUS_OVERLAYFS n
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_TRY_UMOUNT y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_AUTO_ADD_TRY_UMOUNT_FOR_BIND_MOUNT y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_SPOOF_UNAME y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_ENABLE_LOG y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_HIDE_KSU_SUSFS_SYMBOLS y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_OPEN_REDIRECT y
+            ensure_config "$cfg" CONFIG_KSU_SUSFS_SUS_SU n
+          
+            # Add additional tmpfs config settings
+            ensure_config "$cfg" CONFIG_TMPFS_XATTR y
+            ensure_config "$cfg" CONFIG_TMPFS_POSIX_ACL y
+          done
 
       - name: Run sed and perl Commands
         run: |
