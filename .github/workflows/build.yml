@@ -149,9 +149,14 @@ jobs:
           CONFIG_HAVE_REGS_AND_STACK_ACCESS_API=y
           CONFIG_KPROBE_EVENTS=y
           "
-          for config_name in $about_kprobe
-          do
-            printf "\n$config_name\n" >> "arch/arm64/configs/vendor/lahaina_NQGKI.config"
+          for cfg in arch/arm64/configs/vendor/lahaina_QGKI.config arch/arm64/configs/vendor/lahaina_GKI.config; do
+            if [ ! -f "$cfg" ]; then
+              echo "Skip missing config: $cfg"
+              continue
+            fi
+            for config_name in $about_kprobe; do
+              printf "\n$config_name\n" >> "$cfg"
+            done
           done
 
       - name: Apply SUSFS Patches
@@ -216,7 +221,7 @@ jobs:
             fi
           }
           
-          for cfg in ./arch/arm64/configs/gki_defconfig ./arch/arm64/configs/vendor/lahaina_NQGKI.config; do
+          for cfg in ./arch/arm64/configs/gki_defconfig ./arch/arm64/configs/vendor/lahaina_QGKI.config ./arch/arm64/configs/vendor/lahaina_GKI.config; do
             if [ ! -f "$cfg" ]; then
               echo "Skip missing config: $cfg"
               continue
