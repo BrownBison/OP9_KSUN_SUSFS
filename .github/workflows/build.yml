@@ -330,11 +330,15 @@ jobs:
         if: always()
         run: |
           cd "$CONFIG"
-          tar -czf kernel-source.tar.gz --exclude='.git' --exclude='out' --warning=no-file-changed ./kernel ./vendor
-          ls -la
+          if [ -d kernel ] || [ -d vendor ]; then
+            tar -czf kernel-source.tar.gz --exclude='.git' --exclude='out' --warning=no-file-changed ./kernel ./vendor
+            ls -la
+          else
+            echo "Skip archive: kernel/vendor not present."
+          fi
 
       - name: Upload Kernel Source Archive
-        if: always()
+        if: always() && hashFiles(format('{0}/kernel-source.tar.gz', env.CONFIG)) != ''
         uses: actions/upload-artifact@v4
         with:
           name: kernel-source-archive

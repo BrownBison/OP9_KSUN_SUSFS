@@ -28,7 +28,7 @@
   </project>
   
   <!-- AnyKernel3 -->
-  <project path="AnyKernel3" name="TheWildJames/AnyKernel3" remote="github" revision="gki" clone-depth="1" />
+  <project path="AnyKernel3" name="TheWildJames/AnyKernel3" remote="github" revision="main" clone-depth="1" />
   
   <!-- kernel_patches -->
   <project path="kernel_patches" name="TheWildJames/kernel_patches" remote="github" revision="main" clone-depth="1" />
