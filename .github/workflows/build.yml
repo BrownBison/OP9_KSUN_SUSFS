@@ -133,7 +133,7 @@ jobs:
           cd "$CONFIG/kernel/msm-5.4"
           
           echo "Adding KernelSU..."
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s next
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s
           cd KernelSU-Next/kernel
           KSUN_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" 10200)
           echo "KSUNVER=$KSUN_VERSION" >> $GITHUB_ENV
@@ -175,8 +175,8 @@ jobs:
           
           # Change to common directory and apply SUSFS patch
           cd ..
-          patch -p1 -F 3 < 50_add_susfs_in_kernel-5.4.patch || true
-          patch -p1 -F 3 < susfs-reject-fixes.patch || true
+          patch -p1 -F 3 --batch --forward < 50_add_susfs_in_kernel-5.4.patch || true
+          patch -p1 -F 3 --batch --forward < susfs-reject-fixes.patch || true
 
       - name: Apply KSU Hooks
         run: |
@@ -188,7 +188,9 @@ jobs:
         run: |
           echo "Changing to configuration directory: $CONFIG..."
           cd "$CONFIG"
-          patch -p1 -F 3 < $GITHUB_WORKSPACE/Patches/ksu_next_compat_fixes.patch
+          sed -i 's/\r$//' $GITHUB_WORKSPACE/Patches/ksu_next_compat_fixes.patch
+          sed -i '1s/^\xEF\xBB\xBF//' $GITHUB_WORKSPACE/Patches/ksu_next_compat_fixes.patch
+          patch -p1 -F 3 --batch --forward < $GITHUB_WORKSPACE/Patches/ksu_next_compat_fixes.patch
 
       - name: Apply Hide Stuff Patches
         run: |
