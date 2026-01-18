@@ -133,7 +133,7 @@ jobs:
           cd "$CONFIG/kernel/msm-5.4"
           
           echo "Adding KernelSU..."
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s stable
           cd KernelSU-Next/kernel
           KSUN_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" 10200)
           echo "KSUNVER=$KSUN_VERSION" >> $GITHUB_ENV
@@ -187,10 +187,7 @@ jobs:
       - name: Apply KernelSU/SUSFS Compatibility Fixes
         run: |
           echo "Changing to configuration directory: $CONFIG..."
-          cd "$CONFIG"
-          sed -i 's/\r$//' $GITHUB_WORKSPACE/Patches/ksu_next_compat_fixes.patch
-          sed -i '1s/^\xEF\xBB\xBF//' $GITHUB_WORKSPACE/Patches/ksu_next_compat_fixes.patch
-          patch -p1 -F 3 --batch --forward < $GITHUB_WORKSPACE/Patches/ksu_next_compat_fixes.patch
+          python3 $GITHUB_WORKSPACE/Patches/apply_ksu_next_compat_fixes.py "$CONFIG"
 
       - name: Apply Hide Stuff Patches
         run: |
