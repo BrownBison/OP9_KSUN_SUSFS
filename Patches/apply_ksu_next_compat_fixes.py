@@ -24,7 +24,9 @@ def insert_after(text: str, marker: str, block: str) -> str:
 
 
 def replace_block(text: str, pattern: str, replacement: str) -> str:
-    new_text, count = re.subn(pattern, replacement, text, count=1, flags=re.S)
+    new_text, count = re.subn(
+        pattern, lambda _m: replacement, text, count=1, flags=re.S
+    )
     return new_text if count else text
 
 
@@ -474,21 +476,15 @@ def edit_kernel_umount_c(text: str) -> str:
     )
     text = replace_block(text, old_func, new_func)
     if "void ksu_try_umount(" not in text:
-        text = insert_after(
-            text,
-            "static void try_umount(const char *mnt, int flags)\n{\n"
-            "    struct path path;\n",
-            "",
-        )
         add_func = (
-            "\nvoid ksu_try_umount(const char *mnt, bool check_uid, int flags, uid_t uid)\n"
+            "void ksu_try_umount(const char *mnt, bool check_uid, int flags, uid_t uid)\n"
             "{\n"
             "    if (check_uid && !ksu_uid_should_umount(uid))\n"
             "        return;\n"
             "    try_umount(mnt, flags);\n"
-            "}\n"
+            "}\n\n"
         )
-        text = insert_after(text, "}\n\nstruct umount_tw", add_func)
+        text = text.replace("struct umount_tw {", add_func + "struct umount_tw {", 1)
     return text
 
 
