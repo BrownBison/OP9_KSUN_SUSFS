@@ -133,9 +133,7 @@ jobs:
           cd "$CONFIG/kernel/msm-5.4"
           
           echo "Adding KernelSU..."
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s next-susfs-dev
-          
-          git submodule update --init --recursive
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s next
           cd KernelSU-Next/kernel
           KSUN_VERSION=$(expr $(/usr/bin/git rev-list --count HEAD) "+" 10200)
           echo "KSUNVER=$KSUN_VERSION" >> $GITHUB_ENV
