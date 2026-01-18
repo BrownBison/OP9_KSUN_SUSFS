@@ -45,9 +45,9 @@ for i in "${patch_files[@]}"; do
 
     ## read_write.c
     fs/read_write.c)
-        sed -i '/ssize_t vfs_read(struct file/i\#ifdef CONFIG_KSU\nextern bool ksu_vfs_read_hook __read_mostly;\nextern int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\n		size_t *count_ptr, loff_t **pos);\n#endif' fs/read_write.c
+        sed -i '/ssize_t vfs_read(struct file/i\#if defined(CONFIG_KSU) \&\& !defined(CONFIG_KSU_MODULE)\nextern bool ksu_vfs_read_hook __read_mostly;\nextern int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\n		size_t *count_ptr, loff_t **pos);\n#endif' fs/read_write.c
         sed -i '/ssize_t vfs_read(struct file/,/ssize_t ret;/{/ssize_t ret;/a\
-        #ifdef CONFIG_KSU\
+        #if defined(CONFIG_KSU) \&\& !defined(CONFIG_KSU_MODULE)\
         if (unlikely(ksu_vfs_read_hook))\
             ksu_handle_vfs_read(&file, &buf, &count, &pos);\
         #endif
@@ -68,8 +68,8 @@ for i in "${patch_files[@]}"; do
     # drivers/input changes
     ## input.c
     drivers/input/input.c)
-        sed -i '/static void input_handle_event/i\#ifdef CONFIG_KSU\nextern bool ksu_input_hook __read_mostly;\nextern int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *value);\n#endif\n' drivers/input/input.c
-        sed -i '/int disposition = input_get_disposition(dev, type, code, &value);/a\	#ifdef CONFIG_KSU\n	if (unlikely(ksu_input_hook))\n		ksu_handle_input_handle_event(&type, &code, &value);\n	#endif' drivers/input/input.c
+        sed -i '/static void input_handle_event/i\#if defined(CONFIG_KSU) \&\& !defined(CONFIG_KSU_MODULE)\nextern bool ksu_input_hook __read_mostly;\nextern int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *value);\n#endif\n' drivers/input/input.c
+        sed -i '/int disposition = input_get_disposition(dev, type, code, &value);/a\	#if defined(CONFIG_KSU) \&\& !defined(CONFIG_KSU_MODULE)\n	if (unlikely(ksu_input_hook))\n		ksu_handle_input_handle_event(&type, &code, &value);\n	#endif' drivers/input/input.c
         ;;
     esac
 
