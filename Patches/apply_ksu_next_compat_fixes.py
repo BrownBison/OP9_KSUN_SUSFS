@@ -148,11 +148,13 @@ def edit_app_profile_c(text: str) -> str:
         "void seccomp_filter_release(struct task_struct *tsk);\n"
         "#endif\n",
     )
-    text = text.replace(
-        "    atomic_set(&current->seccomp.filter_count, 0);\n",
-        "#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)\n"
-        "    atomic_set(&current->seccomp.filter_count, 0);\n"
-        "#endif\n",
+    text = re.sub(
+        r"^(\s*)atomic_set\(&current->seccomp\.filter_count, 0\);\s*$",
+        r"\1#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 11, 0)\n"
+        r"\1atomic_set(&current->seccomp.filter_count, 0);\n"
+        r"\1#endif",
+        text,
+        flags=re.M,
     )
     text = text.replace(
         "    seccomp_filter_release(fake);\n",
