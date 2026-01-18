@@ -122,6 +122,10 @@ def edit_sucompat_c(text: str) -> str:
     return text.replace("#include <linux/pgtable.h>", "#include <asm/pgtable.h>")
 
 
+def edit_util_c(text: str) -> str:
+    return text.replace("#include <linux/pgtable.h>", "#include <asm/pgtable.h>")
+
+
 def edit_pkg_observer_c(text: str) -> str:
     if "ksu_handle_inode_event" in text and "ksu_handle_event" not in text:
         new_sig = (
@@ -668,6 +672,7 @@ def main() -> int:
     edit_file(root / "kernel/msm-5.4/drivers/kernelsu/allowlist.c", edit_allowlist_c)
     edit_file(root / "kernel/msm-5.4/drivers/kernelsu/setuid_hook.c", edit_setuid_hook_c)
     edit_file(root / "kernel/msm-5.4/drivers/kernelsu/sucompat.c", edit_sucompat_c)
+    edit_file(root / "kernel/msm-5.4/drivers/kernelsu/util.c", edit_util_c)
     edit_file(root / "kernel/msm-5.4/drivers/kernelsu/pkg_observer.c", edit_pkg_observer_c)
     edit_file(root / "kernel/msm-5.4/drivers/kernelsu/app_profile.c", edit_app_profile_c)
     edit_file(root / "kernel/msm-5.4/drivers/kernelsu/seccomp_cache.c", edit_seccomp_cache_c)
