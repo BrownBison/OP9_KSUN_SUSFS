@@ -121,26 +121,41 @@ def edit_sucompat_c(text: str) -> str:
 
 
 def edit_pkg_observer_c(text: str) -> str:
-    old_sig = (
-        "static int ksu_handle_inode_event(struct fsnotify_mark *mark, u32 mask,\n"
-        "                                  struct inode *inode, struct inode *dir,\n"
-        "                                  const struct qstr *file_name, u32 cookie)\n"
-    )
-    new_sig = (
-        "static int ksu_handle_event(struct fsnotify_group *group, struct inode *inode,\n"
-        "                            u32 mask, const void *data, int data_is,\n"
-        "                            const struct qstr *file_name, u32 cookie,\n"
-        "                            struct fsnotify_iter_info *iter_info)\n"
-    )
-    if old_sig in text:
-        text = text.replace(old_sig, new_sig, 1)
+    if "ksu_handle_inode_event" in text and "ksu_handle_event" not in text:
+        new_sig = (
+            "static int ksu_handle_event(struct fsnotify_group *group, struct inode *inode,\n"
+            "                            u32 mask, const void *data, int data_is,\n"
+            "                            const struct qstr *file_name, u32 cookie,\n"
+            "                            struct fsnotify_iter_info *iter_info)\n"
+            "{"
+        )
+        text = re.sub(
+            r"static int ksu_handle_inode_event\s*\([\s\S]*?\)\n\{",
+            new_sig,
+            text,
+            count=1,
+        )
         text = text.replace("ksu_handle_inode_event", "ksu_handle_event")
+        if "ksu_handle_event" in text and "(void)group;" not in text:
+            text = text.replace(
+                new_sig,
+                new_sig
+                + "\n    (void)group;\n"
+                  "    (void)inode;\n"
+                  "    (void)data;\n"
+                  "    (void)data_is;\n"
+                  "    (void)cookie;\n"
+                  "    (void)iter_info;\n",
+            )
     text = text.replace(
         ".handle_inode_event = ksu_handle_event,", ".handle_event = ksu_handle_event,"
     )
     text = text.replace(
         ".handle_inode_event = ksu_handle_inode_event,",
         ".handle_event = ksu_handle_event,",
+    )
+    text = text.replace(
+        ".handle_inode_event = ksu_handle_event", ".handle_event = ksu_handle_event"
     )
     return text
 
