@@ -575,6 +575,22 @@ def edit_read_write_c(text: str) -> str:
         "#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_MODULE)",
         "#if IS_BUILTIN(CONFIG_KSU)",
     )
+    stub = (
+        "\n#if defined(CONFIG_KSU_MODULE)\n"
+        "bool ksu_vfs_read_hook __read_mostly;\n"
+        "int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\n"
+        "\t\t\t  size_t *count_ptr, loff_t **pos)\n"
+        "{\n"
+        "\treturn 0;\n"
+        "}\n"
+        "#endif\n"
+    )
+    text = insert_after(
+        text,
+        "extern int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\n"
+        "\t\tsize_t *count_ptr, loff_t **pos);\n#endif",
+        stub,
+    )
     return text
 
 
@@ -590,6 +606,21 @@ def edit_input_c(text: str) -> str:
     text = text.replace(
         "#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_MODULE)",
         "#if IS_BUILTIN(CONFIG_KSU)",
+    )
+    stub = (
+        "\n#if defined(CONFIG_KSU_MODULE)\n"
+        "bool ksu_input_hook __read_mostly;\n"
+        "int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,\n"
+        "\t\t\t\t\t  int *value)\n"
+        "{\n"
+        "\treturn 0;\n"
+        "}\n"
+        "#endif\n"
+    )
+    text = insert_after(
+        text,
+        "extern int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *value);\n#endif",
+        stub,
     )
     return text
 
