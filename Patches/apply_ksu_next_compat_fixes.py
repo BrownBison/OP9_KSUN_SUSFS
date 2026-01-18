@@ -444,6 +444,11 @@ def edit_kernel_umount_h(text: str) -> str:
 
 def edit_kernel_umount_c(text: str) -> str:
     text = insert_after(text, "#include <linux/types.h>\n", "#include <linux/limits.h>\n#include <linux/uaccess.h>\n")
+    text = insert_after(
+        text,
+        "#include <linux/uaccess.h>\n",
+        "\n#ifndef TWA_RESUME\n#define TWA_RESUME true\n#endif\n",
+    )
     text = text.replace(
         "extern int path_umount(struct path *path, int flags);\n",
         "extern int ksys_umount(char __user *name, int flags);\n",
@@ -635,6 +640,13 @@ def edit_uboot_log(text: str) -> str:
     return text
 
 
+def edit_oplus_display_panel(text: str) -> str:
+    return text.replace(
+        "void __exit oplus_display_panel_exit()",
+        "void __exit oplus_display_panel_exit(void)",
+    )
+
+
 def main() -> int:
     root = Path(sys.argv[1]) if len(sys.argv) > 1 else Path(".")
 
@@ -662,32 +674,42 @@ def main() -> int:
     for rel in (
         "kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8152_regs.c",
         "techpack/audio/asoc/codecs/sia81xx/sia8152_regs.c",
+        "oneplus-modules/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8152_regs.c",
     ):
         edit_file(root / rel, edit_sia8152)
 
     for rel in (
         "kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8152s_regs.c",
         "techpack/audio/asoc/codecs/sia81xx/sia8152s_regs.c",
+        "oneplus-modules/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8152s_regs.c",
     ):
         edit_file(root / rel, edit_sia8152s)
 
     for rel in (
         "kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8159_regs.c",
         "techpack/audio/asoc/codecs/sia81xx/sia8159_regs.c",
+        "oneplus-modules/kernel/msm-5.4/techpack/audio/asoc/codecs/sia81xx/sia8159_regs.c",
     ):
         edit_file(root / rel, edit_sia8159)
 
     for rel in (
         "kernel/msm-5.4/techpack/audio/asoc/codecs/tfa98xx-v6/tfa98xx_v6.c",
         "techpack/audio/asoc/codecs/tfa98xx-v6/tfa98xx_v6.c",
+        "oneplus-modules/kernel/msm-5.4/techpack/audio/asoc/codecs/tfa98xx-v6/tfa98xx_v6.c",
     ):
         edit_file(root / rel, edit_tfa98xx)
 
     for rel in (
         "vendor/oplus/kernel/system/uboot_log/uboot_log.c",
         "vendor/oplus/kernel/system/uboot_log/uboot_log.c",
+        "oneplus-modules/vendor/oplus/kernel/system/uboot_log/uboot_log.c",
     ):
         edit_file(root / rel, edit_uboot_log)
+
+    for rel in (
+        "oneplus-modules/kernel/msm-5.4/techpack/display/oplus/oplus_display_panel.c",
+    ):
+        edit_file(root / rel, edit_oplus_display_panel)
 
     return 0
 
