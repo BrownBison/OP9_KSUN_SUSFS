@@ -559,8 +559,6 @@ def edit_cvp_hfi(text: str) -> str:
 
 
 def edit_supercalls_c(text: str) -> str:
-    if "anon_inode_getfd_secure" in text:
-        return text
     compat = (
         "\n#ifndef anon_inode_getfd_secure\n"
         "#define anon_inode_getfd_secure(name, fops, priv, flags, ctx) \\\n"
