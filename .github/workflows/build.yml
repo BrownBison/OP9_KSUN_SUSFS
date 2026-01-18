@@ -102,10 +102,25 @@ jobs:
           
           # Initialize and sync kernel source
           echo "Initializing and syncing kernel source..."
+          git config --global http.version HTTP/1.1
+          git config --global url."https://${{ github.token }}@github.com/".insteadOf "https://github.com/"
           $REPO init -u https://github.com/${GITHUB_REPOSITORY}.git -b main -m manifest.xml --repo-rev=v2.16 --depth=1 --no-clone-bundle --no-tags
           
           # Sync repo and apply patches
-          $REPO --trace sync -c --no-clone-bundle --no-tags --optimized-fetch -j$(nproc --all) --fail-fast
+          sync_ok=0
+          for i in 1 2 3; do
+            if $REPO --trace sync -c --no-clone-bundle --no-tags --optimized-fetch \
+              --retry-fetches=5 -j$(nproc --all); then
+              sync_ok=1
+              break
+            fi
+            echo "repo sync failed, retrying ($i/3)..."
+            sleep 15
+          done
+          if [ "$sync_ok" -ne 1 ]; then
+            echo "repo sync failed after retries."
+            exit 1
+          fi
 
           set -x
           echo "${{ github.workspace }}/${{ env.CONFIG }}/prebuilts/clang/host/linux-x86/clang-r416183b/bin" >> $GITHUB_PATH
