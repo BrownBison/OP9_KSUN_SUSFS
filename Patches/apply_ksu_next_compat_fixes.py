@@ -562,6 +562,24 @@ def edit_cvp_hfi(text: str) -> str:
     )
 
 
+def edit_read_write_c(text: str) -> str:
+    if "ksu_vfs_read_hook" not in text:
+        return text
+    return text.replace(
+        "#ifdef CONFIG_KSU",
+        "#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_MODULE)",
+    )
+
+
+def edit_input_c(text: str) -> str:
+    if "ksu_input_hook" not in text:
+        return text
+    return text.replace(
+        "#ifdef CONFIG_KSU",
+        "#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_MODULE)",
+    )
+
+
 def edit_supercalls_c(text: str) -> str:
     compat = (
         "\n#ifndef anon_inode_getfd_secure\n"
@@ -684,6 +702,8 @@ def main() -> int:
     edit_file(root / "kernel/msm-5.4/drivers/kernelsu/su_mount_ns.c", edit_su_mount_ns_c)
     edit_file(root / "kernel/msm-5.4/fs/susfs.c", edit_susfs_c)
     edit_file(root / "kernel/msm-5.4/drivers/kernelsu/supercalls.c", edit_supercalls_c)
+    edit_file(root / "kernel/msm-5.4/fs/read_write.c", edit_read_write_c)
+    edit_file(root / "kernel/msm-5.4/drivers/input/input.c", edit_input_c)
 
     edit_file(
         root / "kernel/msm-5.4/drivers/media/platform/msm/cvp/hfi_response_handler.c",
