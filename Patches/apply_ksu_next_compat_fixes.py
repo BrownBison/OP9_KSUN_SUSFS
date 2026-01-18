@@ -53,9 +53,7 @@ def edit_util_h(text: str) -> str:
         "#include <linux/version.h>\n",
         "\n#ifndef TWA_RESUME\n#define TWA_RESUME true\n#endif\n",
     )
-    shim = """
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
+    shim = """#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 11, 0)
 static inline long strncpy_from_user_nofault(char *dst,
                                              const char __user *src,
                                              long count)
@@ -78,7 +76,13 @@ static inline size_t copy_to_user_nofault(void __user *dst,
 }
 #endif
 """
-    text = insert_after(text, "#endif\n\nbool try_set_access_flag", shim + "\n")
+    if "strncpy_from_user_nofault" not in text:
+        text = re.sub(
+            r"(?m)^(bool try_set_access_flag\(unsigned long addr\);)",
+            shim + "\n\\1",
+            text,
+            count=1,
+        )
     return text
 
 
@@ -540,44 +544,48 @@ def edit_cvp_hfi(text: str) -> str:
 
 def edit_sia8152(text: str) -> str:
     text = insert_after(text, "#include <linux/device.h>\n", "#include <linux/slab.h>\n")
-    text = text.replace(
-        "uint8_t vals[reg_num] = {0};",
-        "uint8_t *vals = NULL;",
-    )
-    if "vals = kcalloc" not in text:
-        text = text.replace(
+    marker = "\n\nconst struct sia81xx_opt_if"
+    start = text.find("static void sia8152_check_trimming")
+    end = text.find(marker, start) if start != -1 else -1
+    if start == -1 or end == -1:
+        return text
+    func = text[start:end]
+    func = func.replace("uint8_t vals[reg_num] = {0};", "uint8_t *vals = NULL;")
+    if "kcalloc(" not in func:
+        func = func.replace(
             "uint8_t crc = 0;\n",
             "uint8_t crc = 0;\n\n\tvals = kcalloc(reg_num, sizeof(*vals), GFP_KERNEL);\n\tif (!vals)\n\t\treturn;\n",
         )
-        text = text.replace("return ;", "goto out_free")
-        text = text.replace("return;\n", "goto out_free;\n")
-        if "out_free" not in text:
-            text = text.replace(
-                "}\n\nconst struct sia81xx_opt_if",
-                "\n\nout_free:\n\tkfree(vals);\n}\n\nconst struct sia81xx_opt_if",
-            )
-    return text
+    func = re.sub(r"\breturn\s*;\s*", "goto out_free;\n", func)
+    func = func.replace("if (!vals)\n\t\tgoto out_free;\n", "if (!vals)\n\t\treturn;\n")
+    if "out_free:" not in func:
+        insert_at = func.rfind("\n}")
+        if insert_at != -1:
+            func = func[:insert_at] + "\n\nout_free:\n\tkfree(vals);\n" + func[insert_at:]
+    return text[:start] + func + text[end:]
 
 
 def edit_sia8152s(text: str) -> str:
     text = insert_after(text, "#include <linux/device.h>\n", "#include <linux/slab.h>\n")
-    text = text.replace(
-        "uint8_t vals[reg_num] = {0};",
-        "uint8_t *vals = NULL;",
-    )
-    if "vals = kcalloc" not in text:
-        text = text.replace(
+    marker = "\n\nconst struct sia81xx_opt_if"
+    start = text.find("void sia8152s_check_trimming")
+    end = text.find(marker, start) if start != -1 else -1
+    if start == -1 or end == -1:
+        return text
+    func = text[start:end]
+    func = func.replace("uint8_t vals[reg_num] = {0};", "uint8_t *vals = NULL;")
+    if "kcalloc(" not in func:
+        func = func.replace(
             "uint8_t crc = 0;\n",
             "uint8_t crc = 0;\n\n\tvals = kcalloc(reg_num, sizeof(*vals), GFP_KERNEL);\n\tif (!vals)\n\t\treturn;\n",
         )
-        text = text.replace("return ;", "goto out_free")
-        text = text.replace("return;\n", "goto out_free;\n")
-        if "out_free" not in text:
-            text = text.replace(
-                "}\n\nconst struct sia81xx_opt_if",
-                "\n\nout_free:\n\tkfree(vals);\n}\n\nconst struct sia81xx_opt_if",
-            )
-    return text
+    func = re.sub(r"\breturn\s*;\s*", "goto out_free;\n", func)
+    func = func.replace("if (!vals)\n\t\tgoto out_free;\n", "if (!vals)\n\t\treturn;\n")
+    if "out_free:" not in func:
+        insert_at = func.rfind("\n}")
+        if insert_at != -1:
+            func = func[:insert_at] + "\n\nout_free:\n\tkfree(vals);\n" + func[insert_at:]
+    return text[:start] + func + text[end:]
 
 
 def edit_sia8159(text: str) -> str:
