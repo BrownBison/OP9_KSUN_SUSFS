@@ -565,19 +565,33 @@ def edit_cvp_hfi(text: str) -> str:
 def edit_read_write_c(text: str) -> str:
     if "ksu_vfs_read_hook" not in text:
         return text
-    return text.replace(
-        "#ifdef CONFIG_KSU",
-        "#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_MODULE)",
+    text = insert_after(
+        text,
+        "#include <linux/fs.h>\n",
+        "#include <linux/kconfig.h>\n",
     )
+    text = text.replace("#ifdef CONFIG_KSU", "#if IS_BUILTIN(CONFIG_KSU)")
+    text = text.replace(
+        "#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_MODULE)",
+        "#if IS_BUILTIN(CONFIG_KSU)",
+    )
+    return text
 
 
 def edit_input_c(text: str) -> str:
     if "ksu_input_hook" not in text:
         return text
-    return text.replace(
-        "#ifdef CONFIG_KSU",
-        "#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_MODULE)",
+    text = insert_after(
+        text,
+        "#include <linux/module.h>\n",
+        "#include <linux/kconfig.h>\n",
     )
+    text = text.replace("#ifdef CONFIG_KSU", "#if IS_BUILTIN(CONFIG_KSU)")
+    text = text.replace(
+        "#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_MODULE)",
+        "#if IS_BUILTIN(CONFIG_KSU)",
+    )
+    return text
 
 
 def edit_supercalls_c(text: str) -> str:
