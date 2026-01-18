@@ -558,6 +558,21 @@ def edit_cvp_hfi(text: str) -> str:
     )
 
 
+def edit_supercalls_c(text: str) -> str:
+    if "anon_inode_getfd_secure" in text:
+        return text
+    compat = (
+        "\n#ifndef anon_inode_getfd_secure\n"
+        "#define anon_inode_getfd_secure(name, fops, priv, flags, ctx) \\\n"
+        "    anon_inode_getfd(name, fops, priv, flags)\n"
+        "#endif\n"
+        "#ifndef getfd_secure\n"
+        "#define getfd_secure anon_inode_getfd_secure\n"
+        "#endif\n"
+    )
+    return insert_after(text, "#include <linux/anon_inodes.h>\n", compat)
+
+
 def edit_sia8152(text: str) -> str:
     text = insert_after(text, "#include <linux/device.h>\n", "#include <linux/slab.h>\n")
     marker = "\n\nconst struct sia81xx_opt_if"
@@ -665,6 +680,7 @@ def main() -> int:
     edit_file(root / "kernel/msm-5.4/drivers/kernelsu/kernel_umount.c", edit_kernel_umount_c)
     edit_file(root / "kernel/msm-5.4/drivers/kernelsu/su_mount_ns.c", edit_su_mount_ns_c)
     edit_file(root / "kernel/msm-5.4/fs/susfs.c", edit_susfs_c)
+    edit_file(root / "kernel/msm-5.4/drivers/kernelsu/supercalls.c", edit_supercalls_c)
 
     edit_file(
         root / "kernel/msm-5.4/drivers/media/platform/msm/cvp/hfi_response_handler.c",
