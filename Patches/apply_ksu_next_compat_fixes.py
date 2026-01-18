@@ -565,6 +565,7 @@ def edit_cvp_hfi(text: str) -> str:
 def edit_read_write_c(text: str) -> str:
     if "ksu_vfs_read_hook" not in text:
         return text
+    text = text.replace("\\n__attribute__", "\n__attribute__")
     text = insert_after(
         text,
         "#include <linux/fs.h>\n",
@@ -585,18 +586,18 @@ def edit_read_write_c(text: str) -> str:
         "}\n"
         "#endif\n"
     )
-    text = insert_after(
-        text,
-        "extern int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\n"
-        "\t\tsize_t *count_ptr, loff_t **pos);\n#endif",
-        stub,
-    )
+    if "weak)) bool ksu_vfs_read_hook" not in text:
+        pattern = (
+            r"(#if\s+defined\\(CONFIG_KSU\\).*?extern int ksu_handle_vfs_read\\([\\s\\S]*?\\);\n#endif)"
+        )
+        text = re.sub(pattern, r"\\1" + stub, text, count=1, flags=re.S)
     return text
 
 
 def edit_input_c(text: str) -> str:
     if "ksu_input_hook" not in text:
         return text
+    text = text.replace("\\n__attribute__", "\n__attribute__")
     text = insert_after(
         text,
         "#include <linux/module.h>\n",
@@ -617,11 +618,11 @@ def edit_input_c(text: str) -> str:
         "}\n"
         "#endif\n"
     )
-    text = insert_after(
-        text,
-        "extern int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *value);\n#endif",
-        stub,
-    )
+    if "weak)) bool ksu_input_hook" not in text:
+        pattern = (
+            r"(#if\s+defined\\(CONFIG_KSU\\).*?extern int ksu_handle_input_handle_event\\([\\s\\S]*?\\);\n#endif)"
+        )
+        text = re.sub(pattern, r"\\1" + stub, text, count=1, flags=re.S)
     return text
 
 

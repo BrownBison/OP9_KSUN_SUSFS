@@ -45,9 +45,6 @@ for i in "${patch_files[@]}"; do
 
     ## read_write.c
     fs/read_write.c)
-        if ! grep -q "weak)) bool ksu_vfs_read_hook" fs/read_write.c; then
-            sed -i '/#include <linux\/fs.h>/a\\\n__attribute__((weak)) bool ksu_vfs_read_hook;\\\n__attribute__((weak)) int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\\\n\t\tsize_t *count_ptr, loff_t **pos)\\\n{\\\n\treturn 0;\\\n}\\\n' fs/read_write.c
-        fi
         sed -i '/ssize_t vfs_read(struct file/i\#if defined(CONFIG_KSU) \&\& !defined(CONFIG_KSU_MODULE)\nextern bool ksu_vfs_read_hook __read_mostly;\nextern int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\n		size_t *count_ptr, loff_t **pos);\n#endif' fs/read_write.c
         sed -i '/ssize_t vfs_read(struct file/,/ssize_t ret;/{/ssize_t ret;/a\
         #if defined(CONFIG_KSU) \&\& !defined(CONFIG_KSU_MODULE)\
@@ -71,9 +68,6 @@ for i in "${patch_files[@]}"; do
     # drivers/input changes
     ## input.c
     drivers/input/input.c)
-        if ! grep -q "weak)) bool ksu_input_hook" drivers/input/input.c; then
-            sed -i '/#include <linux\/module.h>/a\\\n__attribute__((weak)) bool ksu_input_hook;\\\n__attribute__((weak)) int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,\\\n\t\t\t\t\t  int *value)\\\n{\\\n\treturn 0;\\\n}\\\n' drivers/input/input.c
-        fi
         sed -i '/static void input_handle_event/i\#if defined(CONFIG_KSU) \&\& !defined(CONFIG_KSU_MODULE)\nextern bool ksu_input_hook __read_mostly;\nextern int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code, int *value);\n#endif\n' drivers/input/input.c
         sed -i '/int disposition = input_get_disposition(dev, type, code, &value);/a\	#if defined(CONFIG_KSU) \&\& !defined(CONFIG_KSU_MODULE)\n	if (unlikely(ksu_input_hook))\n		ksu_handle_input_handle_event(&type, &code, &value);\n	#endif' drivers/input/input.c
         ;;
