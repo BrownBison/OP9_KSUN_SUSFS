@@ -591,6 +591,16 @@ def edit_read_write_c(text: str) -> str:
         count=1,
         flags=re.S,
     )
+    if "ksu_handle_vfs_read(" in text and "__attribute__((weak)) int ksu_handle_vfs_read" not in text:
+        text = insert_after(
+            text,
+            "#include <linux/kconfig.h>\n",
+            "\n__attribute__((weak)) int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\n"
+            "\t\t\t  size_t *count_ptr, loff_t **pos)\n"
+            "{\n"
+            "\treturn 0;\n"
+            "}\n",
+        )
     return text
 
 
