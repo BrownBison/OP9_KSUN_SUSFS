@@ -571,26 +571,26 @@ def edit_read_write_c(text: str) -> str:
         "#include <linux/fs.h>\n",
         "#include <linux/kconfig.h>\n",
     )
-    text = text.replace("#ifdef CONFIG_KSU", "#if IS_BUILTIN(CONFIG_KSU)")
+    text = re.sub(
+        r"(?m)^\\s*#ifdef\\s+CONFIG_KSU\\s*$",
+        "#if IS_BUILTIN(CONFIG_KSU)",
+        text,
+    )
     text = text.replace(
         "#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_MODULE)",
         "#if IS_BUILTIN(CONFIG_KSU)",
     )
-    stub = (
-        "\n#if defined(CONFIG_KSU_MODULE)\n"
-        "bool ksu_vfs_read_hook __read_mostly;\n"
-        "int ksu_handle_vfs_read(struct file **file_ptr, char __user **buf_ptr,\n"
-        "\t\t\t  size_t *count_ptr, loff_t **pos)\n"
-        "{\n"
-        "\treturn 0;\n"
-        "}\n"
-        "#endif\n"
+    text = text.replace(
+        "extern bool ksu_vfs_read_hook __read_mostly;",
+        "__attribute__((weak)) bool ksu_vfs_read_hook __read_mostly;",
     )
-    if "weak)) bool ksu_vfs_read_hook" not in text:
-        pattern = (
-            r"(#if\s+defined\\(CONFIG_KSU\\).*?extern int ksu_handle_vfs_read\\([\\s\\S]*?\\);\n#endif)"
-        )
-        text = re.sub(pattern, r"\\1" + stub, text, count=1, flags=re.S)
+    text = re.sub(
+        r"extern int ksu_handle_vfs_read\\(([\\s\\S]*?)\\);",
+        "__attribute__((weak)) int ksu_handle_vfs_read(\\1)\n{\n\treturn 0;\n}",
+        text,
+        count=1,
+        flags=re.S,
+    )
     return text
 
 
@@ -603,26 +603,26 @@ def edit_input_c(text: str) -> str:
         "#include <linux/module.h>\n",
         "#include <linux/kconfig.h>\n",
     )
-    text = text.replace("#ifdef CONFIG_KSU", "#if IS_BUILTIN(CONFIG_KSU)")
+    text = re.sub(
+        r"(?m)^\\s*#ifdef\\s+CONFIG_KSU\\s*$",
+        "#if IS_BUILTIN(CONFIG_KSU)",
+        text,
+    )
     text = text.replace(
         "#if defined(CONFIG_KSU) && !defined(CONFIG_KSU_MODULE)",
         "#if IS_BUILTIN(CONFIG_KSU)",
     )
-    stub = (
-        "\n#if defined(CONFIG_KSU_MODULE)\n"
-        "bool ksu_input_hook __read_mostly;\n"
-        "int ksu_handle_input_handle_event(unsigned int *type, unsigned int *code,\n"
-        "\t\t\t\t\t  int *value)\n"
-        "{\n"
-        "\treturn 0;\n"
-        "}\n"
-        "#endif\n"
+    text = text.replace(
+        "extern bool ksu_input_hook __read_mostly;",
+        "__attribute__((weak)) bool ksu_input_hook __read_mostly;",
     )
-    if "weak)) bool ksu_input_hook" not in text:
-        pattern = (
-            r"(#if\s+defined\\(CONFIG_KSU\\).*?extern int ksu_handle_input_handle_event\\([\\s\\S]*?\\);\n#endif)"
-        )
-        text = re.sub(pattern, r"\\1" + stub, text, count=1, flags=re.S)
+    text = re.sub(
+        r"extern int ksu_handle_input_handle_event\\(([\\s\\S]*?)\\);",
+        "__attribute__((weak)) int ksu_handle_input_handle_event(\\1)\n{\n\treturn 0;\n}",
+        text,
+        count=1,
+        flags=re.S,
+    )
     return text
 
 
